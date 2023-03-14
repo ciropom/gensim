@@ -195,6 +195,7 @@ from queue import Queue, Empty
 
 from numpy import float32 as REAL
 import numpy as np
+import ahocorasick
 
 from gensim.utils import keep_vocab_item, call_on_class_only, deprecated
 from gensim.models.keyedvectors import KeyedVectors, pseudorandom_weak_vector
@@ -550,7 +551,10 @@ class Word2Vec(utils.SaveLoad):
         sentence_no = -1
         total_words = 0
         min_reduce = 1
-        vocab = defaultdict(int)
+        vocab = ahocorasick.Automaton(
+            value_type=ahocorasick.STORE_INTS,
+            key_type=ahocorasick.KEY_STRING
+        )
         checked_string_types = 0
         for sentence_no, sentence in enumerate(sentences):
             if not checked_string_types:
@@ -567,7 +571,7 @@ class Word2Vec(utils.SaveLoad):
                     sentence_no, total_words, len(vocab),
                 )
             for word in sentence:
-                vocab[word] += 1
+                vocab.add_word(word, vocab.get(word, 0) + 1)
             total_words += len(sentence)
 
             if self.max_vocab_size and len(vocab) > self.max_vocab_size:
@@ -618,11 +622,11 @@ class Word2Vec(utils.SaveLoad):
         # If max_final_vocab is specified instead of min_count,
         # pick a min_count which satisfies max_final_vocab as well as possible.
         if self.max_final_vocab is not None:
-            sorted_vocab = sorted(self.raw_vocab.keys(), key=lambda word: self.raw_vocab[word], reverse=True)
+            sorted_vocab = sorted(self.raw_vocab.keys(), key=lambda word: self.raw_vocab.get(word), reverse=True)
             calc_min_count = 1
 
             if self.max_final_vocab < len(sorted_vocab):
-                calc_min_count = self.raw_vocab[sorted_vocab[self.max_final_vocab]] + 1
+                calc_min_count = self.raw_vocab.get(sorted_vocab[self.max_final_vocab]) + 1
 
             self.effective_min_count = max(calc_min_count, min_count)
             self.add_lifecycle_event(
@@ -657,7 +661,7 @@ class Word2Vec(utils.SaveLoad):
             if not dry_run:
                 # now update counts
                 for word in self.wv.index_to_key:
-                    self.wv.set_vecattr(word, 'count', self.raw_vocab[word])
+                    self.wv.set_vecattr(word, 'count', self.raw_vocab.get(word))
             original_unique_total = len(retain_words) + drop_unique
             retain_unique_pct = len(retain_words) * 100 / max(original_unique_total, 1)
             self.add_lifecycle_event(
@@ -730,7 +734,7 @@ class Word2Vec(utils.SaveLoad):
 
         downsample_total, downsample_unique = 0, 0
         for w in retain_words:
-            v = self.raw_vocab[w]
+            v = self.raw_vocab.get(w)
             word_probability = (np.sqrt(v / threshold_count) + 1) * (threshold_count / v)
             if word_probability < 1.0:
                 downsample_unique += 1

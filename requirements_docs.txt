@@ -12,3 +12,4 @@ sphinxcontrib-napoleon==0.7
 sphinxcontrib-programoutput==0.15
 statsmodels==0.12.2
 testfixtures==6.17.1
+pyahocorasick==1.4.2
