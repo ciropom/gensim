@@ -185,7 +185,7 @@ import sys
 import os
 import heapq
 from timeit import default_timer
-from collections import defaultdict, namedtuple
+from collections import Counter, namedtuple
 from collections.abc import Iterable
 from types import GeneratorType
 import threading
@@ -550,7 +550,7 @@ class Word2Vec(utils.SaveLoad):
         sentence_no = -1
         total_words = 0
         min_reduce = 1
-        vocab = defaultdict(int)
+        vocab = Counter()
         checked_string_types = 0
         for sentence_no, sentence in enumerate(sentences):
             if not checked_string_types:
@@ -566,8 +566,7 @@ class Word2Vec(utils.SaveLoad):
                     "PROGRESS: at sentence #%i, processed %i words, keeping %i word types",
                     sentence_no, total_words, len(vocab),
                 )
-            for word in sentence:
-                vocab[word] += 1
+            vocab.update(sentence)
             total_words += len(sentence)
 
             if self.max_vocab_size and len(vocab) > self.max_vocab_size:
@@ -743,7 +742,7 @@ class Word2Vec(utils.SaveLoad):
 
         if not dry_run and not keep_raw_vocab:
             logger.info("deleting the raw counts dictionary of %i items", len(self.raw_vocab))
-            self.raw_vocab = defaultdict(int)
+            self.raw_vocab = Counter()
 
         logger.info("sample=%g downsamples %i most-common words", sample, downsample_unique)
         self.add_lifecycle_event(
